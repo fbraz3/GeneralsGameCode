@@ -23,7 +23,7 @@ jobs:
       - id: check
         run: |
           echo TAGS
-          echo git describe --tags --abbrev=0 2>/dev/null
+          git describe --tags --abbrev=0 2>/dev/null
           
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
           if [ -z "$LAST_TAG" ]; then
@@ -39,7 +39,7 @@ jobs:
 
   build-generals:
     needs: detect-scm-changes
-    if: needs.detect-changes.outputs.changed == 'true'
+    if: needs.detect-scm-changes.outputs.changed == 'true'
     name: Build Generals${{ matrix.preset && '' }}
     strategy:
       matrix:
@@ -61,7 +61,7 @@ jobs:
 
   build-generalsmd:
     needs: detect-scm-changes
-    if: needs.detect-changes.outputs.changed == 'true'
+    if: needs.detect-scm-changes.outputs.changed == 'true'
     name: Build GeneralsMD${{ matrix.preset && '' }}
     strategy:
       matrix:
