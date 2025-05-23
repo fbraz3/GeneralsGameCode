@@ -20,10 +20,9 @@ jobs:
       changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
-        name: check for tags
         with:
           fetch-depth: 0
-          tags: true
+          fetch-tags: true
       - id: check
         run: |
           echo TAGS
@@ -34,7 +33,7 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          CHANGED=$(git diff --name-only $LAST_TAG..HEAD | wc -l)
+          CHANGED=$(git diff --name-only $LAST_TAG..HEAD | grep -v '.github/workflows/' | wc -l)
           if [ "$CHANGED" -eq "0" ]; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
