@@ -20,11 +20,15 @@ jobs:
       changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        name: check for tags
         with:
           fetch-depth: 0
           tags: true
       - id: check
         run: |
+          echo TAGS
+          git describe --tags --abbrev=0 2>/dev/null
+          
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
           if [ -z "$LAST_TAG" ]; then
             echo "changed=true" >> $GITHUB_OUTPUT
