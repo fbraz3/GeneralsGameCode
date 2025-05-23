@@ -25,7 +25,7 @@ jobs:
           fetch-tags: true
       - id: check
         run: |
-          echo TAGS
+          echo LAST TAG:
           git describe --tags --abbrev=0 2>/dev/null
           
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null)
