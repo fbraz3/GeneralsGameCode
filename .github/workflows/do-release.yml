@@ -20,6 +20,9 @@ jobs:
       changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          tags: true
       - id: check
         run: |
           echo TAGS
