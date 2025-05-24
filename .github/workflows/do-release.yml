@@ -166,6 +166,5 @@ jobs:
           files: |
             generals-*-*-weekly.zip
             generalszh-*-*-weekly.zip
-          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
