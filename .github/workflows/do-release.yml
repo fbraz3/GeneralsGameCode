@@ -106,7 +106,7 @@ jobs:
           cp generals-vc6-artifacts/generalsv.exe generals-vc6-release/GeneralsV.exe
           cp generals-vc6-artifacts/W3DViewV.exe generals-vc6-release/W3DViewV.exe
           cp generals-vc6-artifacts/WorldBuilderV.exe generals-vc6-release/WorldBuilderV.exe
-          zip -j generals-vc6-${{ steps.set_date.outputs.date }}-alpha.zip generals-vc6-release/*
+          zip -j generals-vc6-${{ steps.set_date.outputs.date }}-weekly.zip generals-vc6-release/*
 
       # Generals win32
       - name: Download Generals Win32 Artifacts
@@ -121,7 +121,7 @@ jobs:
           cp generals-win32-artifacts/generalsv.exe generals-win32-release/GeneralsV.exe
           cp generals-win32-artifacts/W3DViewV.exe generals-win32-release/W3DViewV.exe
           cp generals-win32-artifacts/WorldBuilderV.exe generals-win32-release/WorldBuilderV.exe
-          zip -j generals-win32-${{ steps.set_date.outputs.date }}-alpha.zip generals-win32-release/*
+          zip -j generals-win32-${{ steps.set_date.outputs.date }}-weekly.zip generals-win32-release/*
 
       # GeneralsMD vc6
       - name: Download GeneralsMD VC6 Artifacts
@@ -136,7 +136,7 @@ jobs:
           cp generalsmd-vc6-artifacts/generalszh.exe generalsmd-vc6-release/GeneralsZHv.exe
           cp generalsmd-vc6-artifacts/W3DViewZH.exe generalsmd-vc6-release/W3DViewZHv.exe
           cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
-          zip -j generalszh-vc6-${{ steps.set_date.outputs.date }}-alpha.zip generalsmd-vc6-release/*
+          zip -j generalszh-vc6-${{ steps.set_date.outputs.date }}-weekly.zip generalsmd-vc6-release/*
 
       # GeneralsMD win32
       - name: Download GeneralsMD Win32 Artifacts
@@ -151,20 +151,21 @@ jobs:
           cp generalsmd-win32-artifacts/generalszh.exe generalsmd-win32-release/GeneralsZHv.exe
           cp generalsmd-win32-artifacts/W3DViewZH.exe generalsmd-win32-release/W3DViewZHv.exe
           cp generalsmd-win32-artifacts/WorldBuilderZH.exe generalsmd-win32-release/WorldBuilderZHv.exe
-          zip -j generalszh-win32-${{ steps.set_date.outputs.date }}-alpha.zip generalsmd-win32-release/*
+          zip -j generalszh-win32-${{ steps.set_date.outputs.date }}-weekly.zip generalsmd-win32-release/*
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.set_date.outputs.date }}-alpha
-          name: ${{ steps.set_date.outputs.date }}-alpha
+          tag_name: ${{ steps.set_date.outputs.date }}-weekly
+          name: ${{ steps.set_date.outputs.date }}-weekly
           body: |
             **Build notes:**
-            
+
             - **VC6 builds**: May be less compatible with modern systems, but guarantee compatibility with the original binary for multiplayer.
             - **Win32 builds**: Offer better compatibility with modern systems, but multiplayer will only work with other win32 builds.
           files: |
-            generals-*-*-alpha.zip
-            generalszh-*-*-alpha.zip
+            generals-*-*-weekly.zip
+            generalszh-*-*-weekly.zip
+          prerelease: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
