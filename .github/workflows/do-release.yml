@@ -153,11 +153,35 @@ jobs:
           cp generalsmd-win32-artifacts/WorldBuilderZH.exe generalsmd-win32-release/WorldBuilderZHv.exe
           zip -j generalszh-win32-${{ steps.set_date.outputs.date }}-weekly.zip generalsmd-win32-release/*
 
+      - name: Read base version
+        id: base_version
+        run: echo "base_version=$(cat .github/workflows/base-version.txt)" >> $GITHUB_OUTPUT
+
+      - name: Get latest semver tag
+        id: get_tag
+        run: |
+          BASE=${{ steps.base_version.outputs.base_version }}
+          TAG=$(git tag --list "$BASE*" --sort=-v:refname | head -n1)
+          echo "latest_tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Calculate next version
+        id: next_version
+        run: |
+          BASE=${{ steps.base_version.outputs.base_version }}
+          TAG=${{ steps.get_tag.outputs.latest_tag }}
+          if [ -z "$TAG" ]; then
+            NEXT_TAG="$BASE"
+          else
+            IFS='.' read -r major minor patch <<<"$TAG"
+            NEXT_TAG="$major.$minor.$((patch+1))"
+          fi
+          echo "next_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.set_date.outputs.date }}-weekly
-          name: ${{ steps.set_date.outputs.date }}-weekly
+          tag_name: ${{ steps.next_version.outputs.next_tag }}
+          name: ${{ steps.next_version.outputs.next_tag }}
           body: |
             **Build notes:**
 
