@@ -89,69 +89,11 @@ jobs:
     needs: [ build-generals, build-generalsmd ]
     runs-on: ubuntu-latest
     steps:
-      - name: Set Date Output
-        id: set_date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
-
-      # Generals vc6
-      - name: Download Generals VC6 Artifacts
-        uses: actions/download-artifact@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          name: Generals-vc6+t+e
-          path: generals-vc6-artifacts
-
-      - name: Prepare and Zip Generals VC6
-        run: |
-          mkdir generals-vc6-release
-          cp generals-vc6-artifacts/generalsv.exe generals-vc6-release/GeneralsV.exe
-          cp generals-vc6-artifacts/W3DViewV.exe generals-vc6-release/W3DViewV.exe
-          cp generals-vc6-artifacts/WorldBuilderV.exe generals-vc6-release/WorldBuilderV.exe
-          zip -j generals-vc6-${{ steps.set_date.outputs.date }}-weekly.zip generals-vc6-release/*
-
-      # Generals win32
-      - name: Download Generals Win32 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Generals-win32-vcpkg+t+e
-          path: generals-win32-artifacts
-
-      - name: Prepare and Zip Generals Win32
-        run: |
-          mkdir generals-win32-release
-          cp generals-win32-artifacts/generalsv.exe generals-win32-release/GeneralsV.exe
-          cp generals-win32-artifacts/W3DViewV.exe generals-win32-release/W3DViewV.exe
-          cp generals-win32-artifacts/WorldBuilderV.exe generals-win32-release/WorldBuilderV.exe
-          zip -j generals-win32-${{ steps.set_date.outputs.date }}-weekly.zip generals-win32-release/*
-
-      # GeneralsMD vc6
-      - name: Download GeneralsMD VC6 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: GeneralsMD-vc6+t+e
-          path: generalsmd-vc6-artifacts
-
-      - name: Prepare and Zip GeneralsMD VC6
-        run: |
-          mkdir generalsmd-vc6-release
-          cp generalsmd-vc6-artifacts/generalszh.exe generalsmd-vc6-release/GeneralsZHv.exe
-          cp generalsmd-vc6-artifacts/W3DViewZH.exe generalsmd-vc6-release/W3DViewZHv.exe
-          cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
-          zip -j generalszh-vc6-${{ steps.set_date.outputs.date }}-weekly.zip generalsmd-vc6-release/*
-
-      # GeneralsMD win32
-      - name: Download GeneralsMD Win32 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: GeneralsMD-win32+t+e
-          path: generalsmd-win32-artifacts
-
-      - name: Prepare and Zip GeneralsMD Win32
-        run: |
-          mkdir generalsmd-win32-release
-          cp generalsmd-win32-artifacts/generalszh.exe generalsmd-win32-release/GeneralsZHv.exe
-          cp generalsmd-win32-artifacts/W3DViewZH.exe generalsmd-win32-release/W3DViewZHv.exe
-          cp generalsmd-win32-artifacts/WorldBuilderZH.exe generalsmd-win32-release/WorldBuilderZHv.exe
-          zip -j generalszh-win32-${{ steps.set_date.outputs.date }}-weekly.zip generalsmd-win32-release/*
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Read base version
         id: base_version
@@ -175,7 +117,67 @@ jobs:
             IFS='.' read -r major minor patch <<<"$TAG"
             NEXT_TAG="$major.$minor.$((patch+1))"
           fi
-          echo "next_tag=$NEXT_TAG" >> $GITHUB_OUTPUT
+          echo "next_tag=$NEXT_TAG" >> $GITHUB_OUTPUT  
+
+      # Generals vc6
+      - name: Download Generals VC6 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Generals-vc6+t+e
+          path: generals-vc6-artifacts
+
+      - name: Prepare and Zip Generals VC6
+        run: |
+          mkdir generals-vc6-release
+          cp generals-vc6-artifacts/generalsv.exe generals-vc6-release/GeneralsV.exe
+          cp generals-vc6-artifacts/W3DViewV.exe generals-vc6-release/W3DViewV.exe
+          cp generals-vc6-artifacts/WorldBuilderV.exe generals-vc6-release/WorldBuilderV.exe
+          zip -j generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip generals-vc6-release/*
+
+      # Generals win32
+      - name: Download Generals Win32 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Generals-win32-vcpkg+t+e
+          path: generals-win32-artifacts
+
+      - name: Prepare and Zip Generals Win32
+        run: |
+          mkdir generals-win32-release
+          cp generals-win32-artifacts/generalsv.exe generals-win32-release/GeneralsV.exe
+          cp generals-win32-artifacts/W3DViewV.exe generals-win32-release/W3DViewV.exe
+          cp generals-win32-artifacts/WorldBuilderV.exe generals-win32-release/WorldBuilderV.exe
+          zip -j generals-win32-${{ steps.next_version.outputs.next_tag }}.zip generals-win32-release/*
+
+      # GeneralsMD vc6
+      - name: Download GeneralsMD VC6 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: GeneralsMD-vc6+t+e
+          path: generalsmd-vc6-artifacts
+
+      - name: Prepare and Zip GeneralsMD VC6
+        run: |
+          mkdir generalsmd-vc6-release
+          cp generalsmd-vc6-artifacts/generalszh.exe generalsmd-vc6-release/GeneralsZHv.exe
+          cp generalsmd-vc6-artifacts/W3DViewZH.exe generalsmd-vc6-release/W3DViewZHv.exe
+          cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
+          zip -j generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-vc6-release/*
+
+      # GeneralsMD win32
+      - name: Download GeneralsMD Win32 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: GeneralsMD-win32+t+e
+          path: generalsmd-win32-artifacts
+
+      - name: Prepare and Zip GeneralsMD Win32
+        run: |
+          mkdir generalsmd-win32-release
+          cp generalsmd-win32-artifacts/generalszh.exe generalsmd-win32-release/GeneralsZHv.exe
+          cp generalsmd-win32-artifacts/W3DViewZH.exe generalsmd-win32-release/W3DViewZHv.exe
+          cp generalsmd-win32-artifacts/WorldBuilderZH.exe generalsmd-win32-release/WorldBuilderZHv.exe
+          zip -j generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-win32-release/*
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -187,8 +189,24 @@ jobs:
 
             - **VC6 builds**: May be less compatible with modern systems, but guarantee compatibility with the original binary for multiplayer.
             - **Win32 builds**: Offer better compatibility with modern systems, but multiplayer will only work with other win32 builds.
+
+            **Known issues:**
+
+            - Fullscreen executable is currently broken. You must add the `-win` parameter to run the game in windowed mode.
           files: |
-            generals-*-*-weekly.zip
-            generalszh-*-*-weekly.zip
+            generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+            generals-win32-${{ steps.next_version.outputs.next_tag }}.zip
+            generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+            generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up release folders
+        if: always()
+        run: |
+          rm -rf generals-vc6-release generals-win32-release generalsmd-vc6-release generalsmd-win32-release
+          rm -rf generals-vc6-artifacts generals-win32-artifacts generalsmd-vc6-artifacts generalsmd-win32-artifacts
+          rm -f generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -f generals-win32-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -f generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -f generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip
