@@ -54,8 +54,46 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
+  calculate-version:
+    name: Generate version files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Create Version Files
+        run: |
+          BASE_TAG=$(cat .github/workflows/base-version.txt)
+          IFS='.' read -r major minor patch <<<"$BASE_TAG"
+          CURRENT_TAG=$(git tag --list "$major.$minor*" --sort=-v:refname | head -n1)
+          
+          if [ -z "$CURRENT_TAG" ]; then
+            CURRENT_TAG="$BASE_TAG"
+            NEXT_TAG="$BASE_TAG"
+          else
+            IFS='.' read -r major minor patch <<<"$CURRENT_TAG"
+            NEXT_TAG="$major.$minor.$((patch+1))"
+          fi
+          
+          echo "CURRENT_TAG: $CURRENT_TAG"
+          echo "NEXT_TAG: $NEXT_TAG"
+          
+          echo "$CURRENT_TAG" > current_tag.txt
+          echo "$NEXT_TAG" > next_tag.txt
+
+      - name: Upload version files
+        uses: actions/upload-artifact@v4
+        with:
+          name: version_files
+          path: |
+            next_tag.txt
+            current_tag.txt
+
   build-generals:
-    needs: detect-scm-changes
+    needs: [detect-scm-changes, calculate-version]
     if: needs.detect-scm-changes.outputs.changed == 'true'
     name: Build Generals${{ matrix.preset && '' }}
     strategy:
@@ -64,9 +102,11 @@ jobs:
           - preset: "vc6"
             tools: true
             extras: true
+            release: true
           - preset: "win32-vcpkg"
             tools: true
             extras: true
+            release: true
       fail-fast: false
     uses: ./.github/workflows/build-toolchain.yml
     with:
@@ -74,10 +114,11 @@ jobs:
       preset: ${{ matrix.preset }}
       tools: ${{ matrix.tools }}
       extras: ${{ matrix.extras }}
+      release: ${{ matrix.release }}
     secrets: inherit
 
   build-generalsmd:
-    needs: detect-scm-changes
+    needs: [detect-scm-changes, calculate-version]
     if: needs.detect-scm-changes.outputs.changed == 'true'
     name: Build GeneralsMD${{ matrix.preset && '' }}
     strategy:
@@ -86,9 +127,11 @@ jobs:
           - preset: "vc6"
             tools: true
             extras: true
+            release: true
           - preset: "win32"
             tools: true
             extras: true
+            release: true
       fail-fast: false
     uses: ./.github/workflows/build-toolchain.yml
     with:
@@ -96,6 +139,7 @@ jobs:
       preset: ${{ matrix.preset }}
       tools: ${{ matrix.tools }}
       extras: ${{ matrix.extras }}
+      release: ${{ matrix.release }}
     secrets: inherit
 
   create-release:
@@ -109,44 +153,61 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - uses: actions/checkout@v4
+      - name: Download version file
+        uses: actions/download-artifact@v4
+        with:
+          name: version_files
+
       - name: Read base version
         id: base_version
         run: echo "base_version=$(cat .github/workflows/base-version.txt)" >> $GITHUB_OUTPUT
 
       - name: Get latest semver tag
         id: get_tag
-        run: |
-          BASE=${{ steps.base_version.outputs.base_version }}
-          IFS='.' read -r major minor patch <<<"$BASE"
-          TAG=$(git tag --list "$major.$minor*" --sort=-v:refname | head -n1)
-          echo "latest_tag=$TAG" >> $GITHUB_OUTPUT
+        run: echo "current_tag=$(cat current_tag.txt)" >> $GITHUB_OUTPUT
 
       - name: Calculate next version
         id: next_version
-        run: |
-          BASE=${{ steps.base_version.outputs.base_version }}
-          TAG=${{ steps.get_tag.outputs.latest_tag }}
-          if [ -z "$TAG" ]; then
-            NEXT_TAG="$BASE"
-          else
-            IFS='.' read -r major minor patch <<<"$TAG"
-            NEXT_TAG="$major.$minor.$((patch+1))"
-          fi
-          echo "next_tag=$NEXT_TAG" >> $GITHUB_OUTPUT 
+        run: echo "next_tag=$(cat next_tag.txt)" >> $GITHUB_OUTPUT
 
       - name: Collect commits since last release
         id: changelog
         run: |
-          TAG=${{ steps.get_tag.outputs.latest_tag }}
-          if [ -z "$TAG" ]; then
-            echo "commits<<EOF" >> $GITHUB_OUTPUT
-            git log --pretty=format:"- %s" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+          TAG="${{ steps.get_tag.outputs.current_tag }}"
+          NEXT_TAG="${{ steps.next_version.outputs.next_tag }}"
+
+          echo "DEBUG: Current Tag (TAG) = $TAG"
+          echo "DEBUG: Next Tag (NEXT_TAG) = $NEXT_TAG"
+
+          CHANGELOG_COMMITS=""
+          if [ "$TAG" == "$NEXT_TAG" ]; then
+            echo "DEBUG: Condition TAG == NEXT_TAG. Generating changelog for initial release or no new tag."
+            CHANGELOG_COMMITS=$(git log --pretty="format:- %s" --no-merges HEAD | grep -v "Sync Generals repos" | head -n 10 || true)
+
+            if [ -z "$CHANGELOG_COMMITS" ]; then
+              echo "DEBUG: Filtered log for initial release was empty. Trying to get the last 5 commits directly."
+              CHANGELOG_COMMITS=$(git log --pretty="format:- %s" --no-merges HEAD -n 5 || true)
+            fi
           else
-            echo "commits<<EOF" >> $GITHUB_OUTPUT
-            git log "$TAG"..HEAD --pretty=format:"- %s" |grep -v "Sync Generals repos" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
+            echo "DEBUG: Condition TAG != NEXT_TAG. Generating changelog from $TAG to HEAD."
+            CHANGELOG_COMMITS=$(git log --pretty="format:- %s" --no-merges "$TAG"..HEAD | grep -v "Sync Generals repos" || true)
           fi
+
+          echo "--- DEBUG: Output of captured commits ---"
+          if [ -z "$CHANGELOG_COMMITS" ]; then
+            echo "No commits found for the changelog."
+            CHANGELOG_COMMITS="- No relevant changes detected since the last release."
+          else
+            echo "$CHANGELOG_COMMITS"
+          fi
+          echo "--- END DEBUG ---"
+
+          {
+            echo 'commits<<CHANGELOG_EOF'
+            echo "$CHANGELOG_COMMITS"
+            echo 'CHANGELOG_EOF'
+          } >> "$GITHUB_OUTPUT"
 
       # Generals vc6
       - name: Download Generals VC6 Artifacts
@@ -221,8 +282,8 @@ jobs:
 
             ### Known issues
 
-            - Fullscreen executable is currently broken. You must add the `-win` parameter to run the game in windowed mode.
-            
+            - Fullscreen execution can freeze the game. For that case, you should add the `-win` parameter to run the game in windowed mode. 
+
             ### Changelog
             ${{ steps.changelog.outputs.commits }}
           files: |
