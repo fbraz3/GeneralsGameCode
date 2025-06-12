@@ -209,6 +209,10 @@ GameEngine::~GameEngine()
 
 	TheGameResultsQueue->endThreads();
 
+	// TheSuperHackers @fix helmutbuhler 03/06/2025
+	// Reset all subsystems before deletion to prevent crashing due to cross dependencies.
+	reset();
+
 	TheSubsystemList->shutdownAll();
 	delete TheSubsystemList;
 	TheSubsystemList = NULL;
@@ -381,6 +385,8 @@ void GameEngine::init( int argc, char *argv[] )
 		AsciiString fname;
 		fname.format("Data\\%s\\CommandMap.ini", GetRegistryLanguage().str());
 		initSubsystem(TheMetaMap,"TheMetaMap", MSGNEW("GameEngineSubsystem") MetaMap(), NULL, fname.str(), "Data\\INI\\CommandMap.ini");
+
+		TheMetaMap->generateMetaMap();
 
 #if defined(RTS_DEBUG) || defined(RTS_INTERNAL)
 		ini.load("Data\\INI\\CommandMapDebug.ini", INI_LOAD_MULTIFILE, NULL);
@@ -575,6 +581,7 @@ void GameEngine::update( void )
 			TheCDManager->UPDATE();
 		}
 
+		TheGameLogic->preUpdate();
 
 		if ((TheNetwork == NULL && !TheGameLogic->isGamePaused()) || (TheNetwork && TheNetwork->isFrameDataReady()))
 		{

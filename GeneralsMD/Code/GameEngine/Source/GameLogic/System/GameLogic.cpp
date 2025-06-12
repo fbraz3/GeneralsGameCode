@@ -32,7 +32,6 @@
 #include "Common/AudioAffect.h"
 #include "Common/AudioHandleSpecialValues.h"
 #include "Common/BuildAssistant.h"
-#include "Common/CopyProtection.h"
 #include "Common/CRCDebug.h"
 #include "Common/GameAudio.h"
 #include "Common/GameEngine.h"
@@ -251,7 +250,11 @@ GameLogic::GameLogic( void )
 	m_startNewGame = FALSE;
 	m_gameMode = GAME_NONE;
 	m_rankLevelLimit = 1000;
+	m_pauseFrame = 0;
 	m_gamePaused = FALSE;
+	m_pauseSound = FALSE;
+	m_pauseMusic = FALSE;
+	m_pauseInput = FALSE;
 	m_inputEnabledMemory = TRUE;
 	m_mouseVisibleMemory = TRUE;
 	m_loadScreen = NULL;
@@ -416,7 +419,11 @@ void GameLogic::init( void )
 	//ThePlayerList->setLocalPlayer(0);
 
 	m_CRC = 0;
+	m_pauseFrame = 0;
 	m_gamePaused = FALSE;
+	m_pauseSound = FALSE;
+	m_pauseMusic = FALSE;
+	m_pauseInput = FALSE;
 	m_inputEnabledMemory = TRUE;
 	m_mouseVisibleMemory = TRUE;
 	for(Int i = 0; i < MAX_SLOTS; ++i)
@@ -451,7 +458,11 @@ void GameLogic::reset( void )
 	m_objVector.clear();
 	m_objVector.resize(OBJ_HASH_SIZE, NULL);
 
+	m_pauseFrame = 0;
 	m_gamePaused = FALSE;
+	m_pauseSound = FALSE;
+	m_pauseMusic = FALSE;
+	m_pauseInput = FALSE;
 	m_inputEnabledMemory = TRUE;
 	m_mouseVisibleMemory = TRUE;
 	setFPMode();
@@ -818,6 +829,8 @@ static void populateRandomSideAndColor( GameInfo *game )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
+static const WaypointMap s_emptyWaypoints = WaypointMap();
+
 static void populateRandomStartPosition( GameInfo *game )
 {
 	if(!game)
@@ -838,12 +851,13 @@ static void populateRandomStartPosition( GameInfo *game )
 		{
 			if (i != j && (i<numPlayers && j<numPlayers))
 			{
+				const WaypointMap& waypoints = md ? md->m_waypoints : s_emptyWaypoints;
 				AsciiString w1, w2;
 				w1.format("Player_%d_Start", i+1);
 				w2.format("Player_%d_Start", j+1);
-				WaypointMap::const_iterator c1 = md->m_waypoints.find(w1);
-				WaypointMap::const_iterator c2 = md->m_waypoints.find(w2);
-				if (c1 == md->m_waypoints.end() || c2 == md->m_waypoints.end())
+				WaypointMap::const_iterator c1 = waypoints.find(w1);
+				WaypointMap::const_iterator c2 = waypoints.find(w2);
+				if (c1 == waypoints.end() || c2 == waypoints.end())
 				{
 					// couldn't find a waypoint.  must be kinda far away.
 					startSpotDistance[i][j] = 1000000.0f;
@@ -1560,12 +1574,15 @@ void GameLogic::startNewGame( Bool loadingSaveGame )
 				if (count)
 				{
 					ScriptList *pSL = TheSidesList->getSideInfo(0)->getScriptList();
-					Script *next = scripts[0]->getScript();
-					while (next)
+					if (pSL != NULL)
 					{
-						Script *dupe = next->duplicate();
-						pSL->addScript(dupe, 0);
-						next = next->getNext();
+						Script *next = scripts[0]->getScript();
+						while (next)
+						{
+							Script *dupe = next->duplicate();
+							pSL->addScript(dupe, 0);
+							next = next->getNext();
+						}
 					}
 				}
 				for (Int i=0; i<count; ++i)
@@ -3820,18 +3837,6 @@ void GameLogic::update( void )
 	TheLocomotorStore->UPDATE();	
 	TheVictoryConditions->UPDATE();
 
-#ifdef DO_COPY_PROTECTION
-	if (!isInShellGame() && isInGame())
-	{
-		if ((m_frame == 1024) && !CopyProtect::validate())
-		{
-			DEBUG_LOG(("Copy protection failed - bailing"));
-			GameMessage *msg = TheMessageStream->appendMessage(GameMessage::MSG_SELF_DESTRUCT);
-			msg->appendBooleanArgument(FALSE);
-		}
-	}
-#endif
-
 	{
 		//Handle disabled statii (and re-enable objects once frame matches)
 		for( Object *obj = m_objList; obj; obj = obj->getNextObject() )
@@ -3851,6 +3856,20 @@ void GameLogic::update( void )
 	if (!m_startNewGame)
 	{
 		m_frame++;
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void GameLogic::preUpdate()
+{
+	if (m_pauseFrame == m_frame && m_pauseFrame != 0)
+	{
+		m_pauseFrame = 0;
+		Bool pause = TRUE;
+		Bool pauseMusic = FALSE;
+		Bool pauseInput = FALSE;
+		TheGameLogic->setGamePaused(pause, pauseMusic, pauseInput);
 	}
 }
 
@@ -4220,7 +4239,17 @@ Bool GameLogic::isGamePaused( void )
 
 // ------------------------------------------------------------------------------------------------
 // ------------------------------------------------------------------------------------------------
-void GameLogic::setGamePaused( Bool paused, Bool pauseMusic )
+void GameLogic::setGamePausedInFrame( UnsignedInt frame )
+{
+	if (frame >= m_frame)
+	{
+		m_pauseFrame = frame;
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void GameLogic::setGamePaused( Bool paused, Bool pauseMusic, Bool pauseInput )
 {
 	// We need to ignore an unpause called when we are unpaused or else:
 	// Mouse is hidden for some reason (script or something)
@@ -4234,29 +4263,32 @@ void GameLogic::setGamePaused( Bool paused, Bool pauseMusic )
 
 	// GameUnpaused
 	// Set mouse the way it "was" <--- Was counting on right answer being set in Pause.
-	if( paused == m_gamePaused )
+
+	pauseGameLogic(paused);
+	pauseGameSound(paused);
+	pauseGameMusic(paused && pauseMusic);
+	pauseGameInput(paused && pauseInput);
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void GameLogic::pauseGameLogic(Bool paused)
+{
+	m_gamePaused = paused;
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void GameLogic::pauseGameSound(Bool paused)
+{
+	if(m_pauseSound == paused)
 		return;
 
-	m_gamePaused = paused; 
+	m_pauseSound = paused;
 
-	AudioAffect audToAffect = (AudioAffect)(pauseMusic ? AudioAffect_All : (AudioAffect_All & ~AudioAffect_Music));
-	
 	if(paused)
 	{
-		// remember the state of the mouse/input so we can return to the same state once we "unpause"
-		m_inputEnabledMemory = TheInGameUI->getInputEnabled();
-		m_mouseVisibleMemory = TheMouse->getVisibility();
-		
-		// Make sure the mouse is visible and the cursor is an arrow
-		TheMouse->setVisibility(TRUE);
-		TheMouse->setCursor( Mouse::ARROW );
-		
-		// if Input is enabled, disable it
-		if(m_inputEnabledMemory)
-		{
-			TheInGameUI->setInputEnabled(FALSE);
-		}
-		TheAudio->pauseAudio(audToAffect);
+		TheAudio->pauseAudio((AudioAffect)(AudioAffect_All & ~AudioAffect_Music));
 
 #if 0 // Kris added this code some time ago. I'm not sure why -- the pauseAudio should stop the 
       // ambients by itself. Everything seems to work fine without it and it's messing up my 
@@ -4274,11 +4306,7 @@ void GameLogic::setGamePaused( Bool paused, Bool pauseMusic )
 	}
 	else
 	{
-		// set the mouse/input states to what they were before we paused.
-		TheMouse->setVisibility(m_mouseVisibleMemory);
-		if(m_inputEnabledMemory)
-			TheInGameUI->setInputEnabled(TRUE);
-		TheAudio->resumeAudio(audToAffect);
+		TheAudio->resumeAudio((AudioAffect)(AudioAffect_All & ~AudioAffect_Music));
 
 #if 0
 		//Start all ambient sounds!
@@ -4289,6 +4317,61 @@ void GameLogic::setGamePaused( Bool paused, Bool pauseMusic )
 			drawable = drawable->getNextDrawable();
 		}
 #endif
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void GameLogic::pauseGameMusic(Bool paused)
+{
+	if(m_pauseMusic == paused)
+		return;
+
+	m_pauseMusic = paused;
+
+	if(paused)
+	{
+		TheAudio->pauseAudio(AudioAffect_Music);
+	}
+	else
+	{
+		TheAudio->resumeAudio(AudioAffect_Music);
+	}
+}
+
+// ------------------------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------------------------
+void GameLogic::pauseGameInput(Bool paused)
+{
+	if(m_pauseInput == paused)
+		return;
+
+	m_pauseInput = paused;
+
+	if(paused)
+	{
+		// remember the state of the mouse/input so we can return to the same state once we "unpause"
+		m_inputEnabledMemory = TheInGameUI->getInputEnabled();
+		m_mouseVisibleMemory = TheMouse->getVisibility();
+		
+		// Make sure the mouse is visible and the cursor is an arrow
+		TheMouse->setVisibility(TRUE);
+		TheMouse->setCursor( Mouse::ARROW );
+		
+		// if Input is enabled, disable it
+		if(m_inputEnabledMemory)
+		{
+			TheInGameUI->setInputEnabled(FALSE);
+		}
+	}
+	else
+	{
+		// set the mouse/input states to what they were before we paused.
+		TheMouse->setVisibility(m_mouseVisibleMemory);
+		if(m_inputEnabledMemory)
+		{
+			TheInGameUI->setInputEnabled(TRUE);
+		}
 	}
 }
 
