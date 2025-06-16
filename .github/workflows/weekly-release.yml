@@ -153,7 +153,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/checkout@v4
       - name: Download version file
         uses: actions/download-artifact@v4
         with:
