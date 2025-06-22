@@ -15,6 +15,15 @@ on:
         options:
           - 'false'
           - 'true'
+      pre-release:
+        description: 'Mark release as pre-release'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
   schedule:
     - cron: '0 8 * * 1'
 
@@ -69,6 +78,7 @@ jobs:
           BASE_TAG=$(cat .github/workflows/base-version.txt)
           IFS='.' read -r major minor patch <<<"$BASE_TAG"
           CURRENT_TAG=$(git tag --list "$major.$minor*" --sort=-v:refname | head -n1)
+          CURRENT_COMMIT=$(git rev-parse HEAD)
           
           if [ -z "$CURRENT_TAG" ]; then
             CURRENT_TAG="$BASE_TAG"
@@ -83,6 +93,7 @@ jobs:
           
           echo "$CURRENT_TAG" > current_tag.txt
           echo "$NEXT_TAG" > next_tag.txt
+          echo "$CURRENT_COMMIT" > git_commit.txt
 
       - name: Upload version files
         uses: actions/upload-artifact@v4
@@ -91,6 +102,7 @@ jobs:
           path: |
             next_tag.txt
             current_tag.txt
+            git_commit.txt
 
   build-generals:
     needs: [detect-scm-changes, calculate-version]
@@ -273,6 +285,7 @@ jobs:
         with:
           tag_name: ${{ steps.next_version.outputs.next_tag }}
           name: ${{ steps.next_version.outputs.next_tag }}
+          prerelease: ${{ github.event.inputs.pre-release == 'true' }}
           body: |
             ## Build notes
 
