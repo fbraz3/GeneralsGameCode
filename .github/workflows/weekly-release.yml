@@ -56,7 +56,7 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-          CHANGED=$(git diff --name-only $LAST_TAG..HEAD | grep -v '.github/workflows/' | wc -l)
+          CHANGED=$(git diff --name-only $LAST_TAG..HEAD | grep -v '.github/workflows/' | grep -v "Sync Generals repos" | wc -l)
           if [ "$CHANGED" -eq "0" ]; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
