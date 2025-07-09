@@ -46,13 +46,13 @@ jobs:
         with:
           name: version_files
 
-      - name: Cache VC6 Installation
-        if: startsWith(inputs.preset, 'vc6')
-        id: cache-vc6
-        uses: actions/cache@v4
-        with:
-          path: C:\VC6
-          key: vc6-permanent-cache-v1
+      #- name: Cache VC6 Installation
+      #  if: startsWith(inputs.preset, 'vc6')
+      #  id: cache-vc6
+      #  uses: actions/cache@v4
+      #  with:
+      #    path: C:\VC6
+      #    key: vc6-permanent-cache-v1
 
       #- name: Cache CMake Dependencies
       #  id: cache-cmake-deps
