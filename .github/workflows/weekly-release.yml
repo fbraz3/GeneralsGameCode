@@ -115,10 +115,6 @@ jobs:
             tools: true
             extras: true
             release: true
-          - preset: "win32-vcpkg"
-            tools: true
-            extras: true
-            release: true
       fail-fast: false
     uses: ./.github/workflows/build-toolchain.yml
     with:
@@ -137,10 +133,6 @@ jobs:
       matrix:
         include:
           - preset: "vc6"
-            tools: true
-            extras: true
-            release: true
-          - preset: "win32"
             tools: true
             extras: true
             release: true
@@ -233,22 +225,7 @@ jobs:
           cp generals-vc6-artifacts/generalsv.exe generals-vc6-release/GeneralsV.exe
           cp generals-vc6-artifacts/W3DViewV.exe generals-vc6-release/W3DViewV.exe
           cp generals-vc6-artifacts/WorldBuilderV.exe generals-vc6-release/WorldBuilderV.exe
-          zip -j generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip generals-vc6-release/*
-
-      # Generals win32
-      - name: Download Generals Win32 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: Generals-win32-vcpkg+t+e
-          path: generals-win32-artifacts
-
-      - name: Prepare and Zip Generals Win32
-        run: |
-          mkdir generals-win32-release
-          cp generals-win32-artifacts/generalsv.exe generals-win32-release/GeneralsV.exe
-          cp generals-win32-artifacts/W3DViewV.exe generals-win32-release/W3DViewV.exe
-          cp generals-win32-artifacts/WorldBuilderV.exe generals-win32-release/WorldBuilderV.exe
-          zip -j generals-win32-${{ steps.next_version.outputs.next_tag }}.zip generals-win32-release/*
+          zip -j generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip generals-vc6-release/*
 
       # GeneralsMD vc6
       - name: Download GeneralsMD VC6 Artifacts
@@ -263,22 +240,7 @@ jobs:
           cp generalsmd-vc6-artifacts/generalszh.exe generalsmd-vc6-release/GeneralsZHv.exe
           cp generalsmd-vc6-artifacts/W3DViewZH.exe generalsmd-vc6-release/W3DViewZHv.exe
           cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
-          zip -j generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-vc6-release/*
-
-      # GeneralsMD win32
-      - name: Download GeneralsMD Win32 Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: GeneralsMD-win32+t+e
-          path: generalsmd-win32-artifacts
-
-      - name: Prepare and Zip GeneralsMD Win32
-        run: |
-          mkdir generalsmd-win32-release
-          cp generalsmd-win32-artifacts/generalszh.exe generalsmd-win32-release/GeneralsZHv.exe
-          cp generalsmd-win32-artifacts/W3DViewZH.exe generalsmd-win32-release/W3DViewZHv.exe
-          cp generalsmd-win32-artifacts/WorldBuilderZH.exe generalsmd-win32-release/WorldBuilderZHv.exe
-          zip -j generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-win32-release/*
+          zip -j generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip generalsmd-vc6-release/*
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -287,31 +249,18 @@ jobs:
           name: ${{ steps.next_version.outputs.next_tag }}
           prerelease: ${{ github.event.inputs.pre-release == 'true' }}
           body: |
-            ## Build notes
-
-            - **VC6 builds**: May be less compatible with modern systems, but guarantee compatibility with the original binary for multiplayer.
-            - **Win32 builds**: Offer better compatibility with modern systems, but multiplayer will only work with other win32 builds.
-
-            ### Known issues
-
-            - Fullscreen execution can freeze the game. For that case, you should add the `-win` parameter to run the game in windowed mode. 
-
             ### Changelog
             ${{ steps.changelog.outputs.commits }}
           files: |
-            generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip
-            generals-win32-${{ steps.next_version.outputs.next_tag }}.zip
-            generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip
-            generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip
+            generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
+            generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up release folders
         if: always()
         run: |
-          rm -rf generals-vc6-release generals-win32-release generalsmd-vc6-release generalsmd-win32-release
-          rm -rf generals-vc6-artifacts generals-win32-artifacts generalsmd-vc6-artifacts generalsmd-win32-artifacts
-          rm -f generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip
-          rm -f generals-win32-${{ steps.next_version.outputs.next_tag }}.zip
-          rm -f generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip
-          rm -f generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -rf generals-vc6-release generalsmd-vc6-release
+          rm -rf generals-vc6-artifacts generalsmd-vc6-artifacts
+          rm -f generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
+          rm -f generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
