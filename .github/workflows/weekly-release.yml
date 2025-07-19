@@ -7,8 +7,8 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      release_notes:
-        description: 'Release notes (opcional)'
+      build_notes:
+        description: 'Build notes (opcional)'
         required: false
         default: ''
         type: string
@@ -256,8 +256,8 @@ jobs:
         id: release_body
         run: |
           BODY=""
-          if [ "${{ github.event.inputs.release_notes }}" != "" ]; then
-            BODY="### Release notes\n${{ github.event.inputs.release_notes }}\n"
+          if [ "${{ github.event.inputs.build_notes }}" != "" ]; then
+            BODY="### Build notes\n${{ github.event.inputs.build_notes }}\n"
           fi
           if [ "${{ github.event.inputs.known_issues }}" != "" ]; then
             BODY="${BODY}### Known issues\n${{ github.event.inputs.known_issues }}\n"
