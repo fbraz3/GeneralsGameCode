@@ -7,6 +7,11 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
+      release_notes:
+        description: 'Release notes (opcional)'
+        required: false
+        default: ''
+        type: string
       force_changed:
         description: 'Force build'
         required: false
@@ -249,7 +254,7 @@ jobs:
           name: ${{ steps.next_version.outputs.next_tag }}
           prerelease: ${{ github.event.inputs.pre-release == 'true' }}
           body: |
-            ### Changelog
+            ${{ github.event.inputs.release_notes != '' && format('### Release notes\n{0}\n', github.event.inputs.release_notes) || '' }}### Changelog
             ${{ steps.changelog.outputs.commits }}
           files: |
             generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
