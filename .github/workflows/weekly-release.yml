@@ -12,6 +12,11 @@ on:
         required: false
         default: ''
         type: string
+      known_issues:
+        description: 'Known issues (opcional)'
+        required: false
+        default: ''
+        type: string
       force_changed:
         description: 'Force build'
         required: false
@@ -247,15 +252,28 @@ jobs:
           cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
           zip -j generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip generalsmd-vc6-release/*
 
+      - name: Generate release notes
+        id: release_body
+        run: |
+          BODY=""
+          if [ "${{ github.event.inputs.release_notes }}" != "" ]; then
+            BODY="### Release notes\n${{ github.event.inputs.release_notes }}\n"
+          fi
+          if [ "${{ github.event.inputs.known_issues }}" != "" ]; then
+            BODY="${BODY}### Known issues\n${{ github.event.inputs.known_issues }}\n"
+          fi
+          BODY="${BODY}### Changelog\n${{ steps.changelog.outputs.commits }}"
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.next_version.outputs.next_tag }}
           name: ${{ steps.next_version.outputs.next_tag }}
           prerelease: ${{ github.event.inputs.pre-release == 'true' }}
-          body: |
-            ${{ github.event.inputs.release_notes != '' && format('### Release notes\n{0}\n', github.event.inputs.release_notes) || '' }}### Changelog
-            ${{ steps.changelog.outputs.commits }}
+          body: ${{ steps.release_body.outputs.body }}
           files: |
             generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
             generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
