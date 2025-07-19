@@ -257,14 +257,14 @@ jobs:
         run: |
           BODY=""
           if [ "${{ github.event.inputs.build_notes }}" != "" ]; then
-            BODY="### Build notes\n${{ github.event.inputs.build_notes }}\n"
+            BODY="${BODY}### Build notes\n${{ github.event.inputs.build_notes }}\n"
           fi
           if [ "${{ github.event.inputs.known_issues }}" != "" ]; then
             BODY="${BODY}### Known issues\n${{ github.event.inputs.known_issues }}\n"
           fi
           BODY="${BODY}### Changelog\n${{ steps.changelog.outputs.commits }}"
           echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "$BODY" >> $GITHUB_OUTPUT
+          echo -e "$BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
