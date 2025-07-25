@@ -7,16 +7,6 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      build_notes:
-        description: 'Build notes (opcional)'
-        required: false
-        default: 'Hope you enjoy this new build!'
-        type: string
-      known_issues:
-        description: 'Known issues (opcional)'
-        required: false
-        default: ''
-        type: string
       force_changed:
         description: 'Force build'
         required: false
@@ -35,7 +25,7 @@ on:
           - 'true'
 
   schedule:
-    - cron: '0 9 * * 5'
+    - cron: '0 8 * * 1'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -76,8 +66,6 @@ jobs:
   calculate-version:
     name: Generate version files
     runs-on: ubuntu-latest
-    outputs:
-      next_tag: ${{ steps.next_tag.outputs.next_tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -107,10 +95,6 @@ jobs:
           echo "$NEXT_TAG" > next_tag.txt
           echo "$CURRENT_COMMIT" > git_commit.txt
 
-      - name: Calculate next version
-        id: next_tag
-        run: echo "next_tag=$(cat next_tag.txt)" >> $GITHUB_OUTPUT
-
       - name: Upload version files
         uses: actions/upload-artifact@v4
         with:
@@ -130,7 +114,11 @@ jobs:
           - preset: "vc6"
             tools: true
             extras: true
-            release: fbraz3-${{ needs.calculate-version.outputs.next_tag }}
+            release: true
+          - preset: "win32-vcpkg"
+            tools: true
+            extras: true
+            release: true
       fail-fast: false
     uses: ./.github/workflows/build-toolchain.yml
     with:
@@ -151,7 +139,11 @@ jobs:
           - preset: "vc6"
             tools: true
             extras: true
-            release: fbraz3-${{ needs.calculate-version.outputs.next_tag }}
+            release: true
+          - preset: "win32"
+            tools: true
+            extras: true
+            release: true
       fail-fast: false
     uses: ./.github/workflows/build-toolchain.yml
     with:
@@ -241,7 +233,22 @@ jobs:
           cp generals-vc6-artifacts/generalsv.exe generals-vc6-release/GeneralsV.exe
           cp generals-vc6-artifacts/W3DViewV.exe generals-vc6-release/W3DViewV.exe
           cp generals-vc6-artifacts/WorldBuilderV.exe generals-vc6-release/WorldBuilderV.exe
-          zip -j generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip generals-vc6-release/*
+          zip -j generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip generals-vc6-release/*
+
+      # Generals win32
+      - name: Download Generals Win32 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Generals-win32-vcpkg+t+e
+          path: generals-win32-artifacts
+
+      - name: Prepare and Zip Generals Win32
+        run: |
+          mkdir generals-win32-release
+          cp generals-win32-artifacts/generalsv.exe generals-win32-release/GeneralsV.exe
+          cp generals-win32-artifacts/W3DViewV.exe generals-win32-release/W3DViewV.exe
+          cp generals-win32-artifacts/WorldBuilderV.exe generals-win32-release/WorldBuilderV.exe
+          zip -j generals-win32-${{ steps.next_version.outputs.next_tag }}.zip generals-win32-release/*
 
       # GeneralsMD vc6
       - name: Download GeneralsMD VC6 Artifacts
@@ -256,22 +263,22 @@ jobs:
           cp generalsmd-vc6-artifacts/generalszh.exe generalsmd-vc6-release/GeneralsZHv.exe
           cp generalsmd-vc6-artifacts/W3DViewZH.exe generalsmd-vc6-release/W3DViewZHv.exe
           cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
-          zip -j generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip generalsmd-vc6-release/*
+          zip -j generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-vc6-release/*
 
-      - name: Generate release notes
-        id: release_body
+      # GeneralsMD win32
+      - name: Download GeneralsMD Win32 Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: GeneralsMD-win32+t+e
+          path: generalsmd-win32-artifacts
+
+      - name: Prepare and Zip GeneralsMD Win32
         run: |
-          BODY=""
-          if [ "${{ github.event.inputs.build_notes }}" != "" ]; then
-            BODY="${BODY}### Build notes\n${{ github.event.inputs.build_notes }}\n"
-          fi
-          if [ "${{ github.event.inputs.known_issues }}" != "" ]; then
-            BODY="${BODY}### Known issues\n${{ github.event.inputs.known_issues }}\n"
-          fi
-          BODY="${BODY}### Changelog\n${{ steps.changelog.outputs.commits }}"
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo -e "$BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          mkdir generalsmd-win32-release
+          cp generalsmd-win32-artifacts/generalszh.exe generalsmd-win32-release/GeneralsZHv.exe
+          cp generalsmd-win32-artifacts/W3DViewZH.exe generalsmd-win32-release/W3DViewZHv.exe
+          cp generalsmd-win32-artifacts/WorldBuilderZH.exe generalsmd-win32-release/WorldBuilderZHv.exe
+          zip -j generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-win32-release/*
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -279,17 +286,32 @@ jobs:
           tag_name: ${{ steps.next_version.outputs.next_tag }}
           name: ${{ steps.next_version.outputs.next_tag }}
           prerelease: ${{ github.event.inputs.pre-release == 'true' }}
-          body: ${{ steps.release_body.outputs.body }}
+          body: |
+            ## Build notes
+
+            - **VC6 builds**: May be less compatible with modern systems, but guarantee compatibility with the original binary for multiplayer.
+            - **Win32 builds**: Offer better compatibility with modern systems, but multiplayer will only work with other win32 builds.
+
+            ### Known issues
+
+            - Fullscreen execution can freeze the game. For that case, you should add the `-win` parameter to run the game in windowed mode. 
+
+            ### Changelog
+            ${{ steps.changelog.outputs.commits }}
           files: |
-            generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
-            generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
+            generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+            generals-win32-${{ steps.next_version.outputs.next_tag }}.zip
+            generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+            generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Clean up release folders
         if: always()
         run: |
-          rm -rf generals-vc6-release generalsmd-vc6-release
-          rm -rf generals-vc6-artifacts generalsmd-vc6-artifacts
-          rm -f generals-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
-          rm -f generalszh-${{ steps.next_version.outputs.next_tag }}-fbraz3.zip
+          rm -rf generals-vc6-release generals-win32-release generalsmd-vc6-release generalsmd-win32-release
+          rm -rf generals-vc6-artifacts generals-win32-artifacts generalsmd-vc6-artifacts generalsmd-win32-artifacts
+          rm -f generals-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -f generals-win32-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -f generalszh-vc6-${{ steps.next_version.outputs.next_tag }}.zip
+          rm -f generalszh-win32-${{ steps.next_version.outputs.next_tag }}.zip
