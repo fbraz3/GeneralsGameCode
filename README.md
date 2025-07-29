@@ -33,7 +33,7 @@ Contributions are welcome! Feel free to open issues or pull requests to improve 
 
 ## Special Thanks
 
-- The original [Westwood Studios](https://en.wikipedia.org/wiki/Westwood_Studios) that created the Command & Conquer series
+- The original [Westwood Studios](https://en.wikipedia.org/wiki/Westwood_Studios) for creating the Command & Conquer series
 - [EA Games](https://en.wikipedia.org/wiki/Electronic_Arts) for creating the original Command & Conquer: Generals game, which inspires this project.
 - For [Xezon](https://github.com/xezon) and [the SuperHackers team](https://github.com/TheSuperHackers) for their work on the GeneralsGameCode project, and to all contributors who help keep this project up-to-date.
 
