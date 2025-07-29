@@ -20,7 +20,7 @@ Many users want to test the latest features and fixes from the GeneralsGameCode 
 
 ## Usage
 
-- Download the latest build from the [Releases](./releases) section.
+- Download the latest build from the [Releases](https://github.com/fbraz3/GeneralsGameCode/releases) section.
 - Follow the instructions provided in the release notes to run the game.
 
 ## Disclaimer
