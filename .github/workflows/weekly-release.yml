@@ -261,7 +261,15 @@ jobs:
           cp generals-vc6-artifacts/generalsv.exe generals-vc6-release/GeneralsV.exe
           cp generals-vc6-artifacts/W3DViewV.exe generals-vc6-release/W3DViewV.exe
           cp generals-vc6-artifacts/WorldBuilderV.exe generals-vc6-release/WorldBuilderV.exe
-          zip -j generals-fbraz3-${{ steps.next_version.outputs.next_tag }}.zip generals-vc6-release/*
+
+          # Include Credits.ini if available
+          if [ -f "generals-vc6-artifacts/Data/INI/Credits.ini" ]; then
+            mkdir -p generals-vc6-release/Data/INI
+            cp generals-vc6-artifacts/Data/INI/Credits.ini generals-vc6-release/Data/INI/Credits.ini
+            echo "Credits.ini included in Generals release package"
+          fi
+
+          zip -r generals-fbraz3-${{ steps.next_version.outputs.next_tag }}.zip generals-vc6-release/*
 
       # GeneralsMD vc6
       - name: Download GeneralsMD VC6 Artifacts
@@ -276,7 +284,15 @@ jobs:
           cp generalsmd-vc6-artifacts/generalszh.exe generalsmd-vc6-release/GeneralsZHv.exe
           cp generalsmd-vc6-artifacts/W3DViewZH.exe generalsmd-vc6-release/W3DViewZHv.exe
           cp generalsmd-vc6-artifacts/WorldBuilderZH.exe generalsmd-vc6-release/WorldBuilderZHv.exe
-          zip -j generalszh-fbraz3-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-vc6-release/*
+
+          # Include Credits.ini if available
+          if [ -f "generalsmd-vc6-artifacts/Data/INI/Credits.ini" ]; then
+            mkdir -p generalsmd-vc6-release/Data/INI
+            cp generalsmd-vc6-artifacts/Data/INI/Credits.ini generalsmd-vc6-release/Data/INI/Credits.ini
+            echo "Credits.ini included in GeneralsMD release package"
+          fi
+
+          zip -r generalszh-fbraz3-${{ steps.next_version.outputs.next_tag }}.zip generalsmd-vc6-release/*
 
       - name: Generate release notes
         id: release_body

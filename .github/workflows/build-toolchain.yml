@@ -157,6 +157,18 @@ jobs:
         run: |
           cmake --build --preset ${{ inputs.preset }}
 
+      - name: Generate Credits.ini
+        shell: pwsh
+        run: |
+          Write-Host "Generating Credits.ini with contributors..." -ForegroundColor Cyan
+          python scripts/generate-credits.py
+
+          $buildDir = "build\${{ inputs.preset }}"
+          $dataDir = New-Item -ItemType Directory -Force -Path "$buildDir\${{ inputs.game }}\Data\INI" -Verbose
+          Copy-Item -Path "Credits.ini" -Destination "$dataDir\Credits.ini" -Verbose
+
+          Write-Host "Credits.ini generated and copied to build directory" -ForegroundColor Green
+
       - name: Collect ${{ inputs.game }} ${{ inputs.preset }}${{ inputs.tools && '+t' || '' }}${{ inputs.extras && '+e' || '' }} Artifact
         shell: pwsh
         run: |
@@ -172,8 +184,16 @@ jobs:
           }
           $files | Move-Item -Destination $artifactsDir -Verbose -Force
 
+          # Include Credits.ini in artifacts
+          $creditsFile = "$buildDir\${{ inputs.game }}\Data\INI\Credits.ini"
+          if (Test-Path $creditsFile) {
+            $dataArtifactsDir = New-Item -ItemType Directory -Force -Path "$artifactsDir\Data\INI" -Verbose
+            Copy-Item -Path $creditsFile -Destination "$dataArtifactsDir\Credits.ini" -Verbose
+            Write-Host "Credits.ini included in artifacts" -ForegroundColor Green
+          }
+
           Write-Host "Files in artifactsDir:"
-          Get-ChildItem -Path $artifactsDir | ForEach-Object { Write-Host $_.FullName }
+          Get-ChildItem -Path $artifactsDir -Recurse | ForEach-Object { Write-Host $_.FullName }
 
       - name: Upload ${{ inputs.game }} ${{ inputs.preset }}${{ inputs.tools && '+t' || '' }}${{ inputs.extras && '+e' || '' }} Artifact
         uses: actions/upload-artifact@v4
